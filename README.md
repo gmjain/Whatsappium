@@ -5,8 +5,8 @@ Whatsappium
 
 Currently supports:
 
-* `Alt + Up` - Move to previous conversation
-* `Alt + Down` - Move to next conversation
-* `Alt + K` - Search contacts and chat
-* `Alt + J` - Open Emoji window
-* `Alt + Left` + `Alt + Right` - Navigate Emoji Tabs when open
+* `Alt + i` - Move to previous conversation
+* `Alt + j` - Move to next conversation
+* `Alt + k` - Search contacts and chat
+* `Alt + .` - Open Emoji window
+
