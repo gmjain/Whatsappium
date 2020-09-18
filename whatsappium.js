@@ -1,7 +1,6 @@
-//docInputSearch = 'input._2zCfw'
-docInputSearch = '[title="Search or start new chat"]'
+docInputSearch = '.selectable-text'
 docSelectedChatSearchButton = 'span[data-icon="search-alt"]'
-docChatTextBox = 'div[contenteditable=true]'
+docChatTextBox = 'div[spellcheck=true]'
 docEmojiButton = 'span[data-icon=smiley]'
 docSmileyButton = 'span[data-icon=smiley]'
 docGifButton = 'span[data-icon=gif]'
@@ -10,9 +9,28 @@ docStickerButton = 'span[data-icon=sticker]'
 docEmojiSmileyPeopleDiv = '[title="Smileys & People"]'
 docEmojiRecentDiv = '[title="Recent"]'
 docPanelActive = 'div[data-state="open"]'
-chatListSelector = '.X7YrQ'
-chatListChatSelector = '._2UaNq'
-chatActiveChatSelector = '_3mMX1'
+sidePaneSelector = '[id="pane-side"]'
+
+function findChatList(div) {
+    children = div.childNodes
+    if (!children)
+	return null;
+    if (children.length > 6) {
+	// Found the chatList
+	return children;
+    }
+    for (i = 0; i < children.length; i++) {
+	found = findChatList(children[i]);
+	if (found)
+	    return found;
+    }
+    return null;
+}
+
+function extractInteger(txt) {
+    numbers = txt.match(/\d/g).join('');
+    return parseInt(numbers);
+}
 
 function dispatchClick(item) {
     item.dispatchEvent(new window.MouseEvent('mousedown', {
@@ -22,40 +40,69 @@ function dispatchClick(item) {
     }));
 }
 
-function makeActive(item) {
-    const chat = item.querySelector(chatListChatSelector);
-    if (chat) {
-        dispatchClick(chat);
+function makeActive(chat) {
+    chatDiv = getChatDiv(chat);
+    if (chatDiv) {
+        dispatchClick(chatDiv);
     }
 }
 
-function isItemActive(item) {
-    const chat = item.querySelector(chatListChatSelector);
-    return chat && chat.classList.contains(chatActiveChatSelector);
+function getChatDiv(chat) {
+    tabIndexDiv = chat.childNodes[0];
+    chatDiv = tabIndexDiv.childNodes[0];
+    return chatDiv;
+}
+
+function getChatClasses(chat) {
+    chatDiv = getChatDiv(chat);
+    classNames = chatDiv.classList;
+    /*
+    sanitizedNames = [];
+    for (i = 0; i < classNames.length; i++) {
+	cls = classNames[i];
+	if (cls.startsWith('_')) {
+	    sanitizedNames.push(cls);
+	}
+    }
+    return sanitizedNames;
+    */
+    return classNames;
+}
+
+function isChatActive(chat) {
+    classes = getChatClasses(chat);
+    if (classes.length > 1)
+	return true;
+    return false;
 }
 
 function makeChatActiveIfNot() {
-	activeChat = document.querySelector('.'+chatActiveChatSelector);
-	if (!activeChat)
-		navigateConversation(1);
+    const chatList = getChatList();
+    for (i = 0; i < chatList.length; i++) {
+	chat = chatList[i];
+	if (isChatActive(chat))
+	    return;
+    }
+    navigateConversation(1);
 }
 
 function getChatList() {
-    const chatListElem = document.querySelectorAll(chatListSelector);
-    if (chatListElem.length > 0) {
-        return Array.from(chatListElem).sort(function (a, b) {
-            return parseInt(a.style.transform.match(/\(.*\)/i)[0].match(/\d+/)[0]) - parseInt(b.style.transform.match(/\(.*\)/i)[0].match(/\d+/)[0])
-        });
+    paneDiv = document.querySelector(sidePaneSelector);
+    chatList = findChatList(paneDiv);
+    if (! chatList) {
+	return;
     }
+    return Array.from(chatList).sort(function (a, b) {
+        return extractInteger(a.style.transform) - extractInteger(b.style.transform)
+    });
 }
 
 function navigateConversation(delta) {
     const chatList = getChatList();
-
     let index = -1;
     for (let i = 0; i < chatList.length; i++) {
-        const item = chatList[i]
-        if (isItemActive(item)) {
+        chat = chatList[i]
+        if (isChatActive(chat)) {
             index = i + delta;
             break;
         }
@@ -66,8 +113,7 @@ function navigateConversation(delta) {
         index = 0;
     }
 
-    let target = chatList[index];
-    makeActive(target);
+    makeActive(chatList[index]);
 }
 
 function searchChats() {
@@ -82,7 +128,7 @@ function searchCurrentChat() {
     // The following 3 dots are not dots. They are square ellipsis.
     const selectedChatSearchButton = document.querySelector('div[title="Search…"]');
     if (selectedChatSearchButton) {
-        dispatchClick(selectedChatSearchButton)
+    dispatchClick(selectedChatSearchButton)
     }
     */
     const selectedChatSearchButton = document.querySelector(docSelectedChatSearchButton);
@@ -99,35 +145,35 @@ function writeInChat() {
 }
 
 function getEmojiPanelTabs(category) {
-	if (category == "emoji")
-		selectorCategory = docEmojiRecentDiv;
-	if (category == "gif")
-		selectorCategory = docGifTrendingDiv;
-	const categoryDiv = document.querySelector(selectorCategory);
-	if (!categoryDiv)
-		return null
-	const divClass = "." + categoryDiv.classList[0];
-	return document.querySelectorAll(divClass);
+    if (category == "emoji")
+	selectorCategory = docEmojiRecentDiv;
+    if (category == "gif")
+	selectorCategory = docGifTrendingDiv;
+    const categoryDiv = document.querySelector(selectorCategory);
+    if (!categoryDiv)
+	return null
+    const divClass = "." + categoryDiv.classList[0];
+    return document.querySelectorAll(divClass);
 }
 
 function getActiveEmojiPanel(){
-	panelOpen = document.querySelector(docPanelActive)
-	if (!panelOpen)
-		return null;
-	if (getEmojiPanelTabs("emoji"))
-		return "emoji";
-	else if (getEmojiPanelTabs("gif"))
-		return "gif";
+    panelOpen = document.querySelector(docPanelActive)
+    if (!panelOpen)
 	return null;
+    if (getEmojiPanelTabs("emoji"))
+	return "emoji";
+    else if (getEmojiPanelTabs("gif"))
+	return "gif";
+    return null;
 }
 
 function navigateTabs(category, delta) {
     var navTabs = getEmojiPanelTabs(category);
-	var index = -1;
+    var index = -1;
     for (let i = 0; i < navTabs.length; i++) {
         if (navTabs[i].classList.length == 3) {
             index = i + delta;
-			index = ((index % navTabs.length) + navTabs.length) % navTabs.length;
+	    index = ((index % navTabs.length) + navTabs.length) % navTabs.length;
             break;
         }
     }
@@ -149,16 +195,16 @@ function clickGifButton() {
 }
 
 function showSmileys() {
-	// One click for panel, second to switch focus to smileys in case
-	// gif or stickers are active in the panel
-	makeChatActiveIfNot();
-	clickEmojiButton();
-	clickEmojiButton();
+    // One click for panel, second to switch focus to smileys in case
+    // gif or stickers are active in the panel
+    makeChatActiveIfNot();
+    clickEmojiButton();
+    clickEmojiButton();
 }
 
 function showGifs(){
-	makeChatActiveIfNot();
-	clickGifButton();
+    makeChatActiveIfNot();
+    clickGifButton();
 }
 
 function isKeyCode(keyCode, char) {
@@ -169,7 +215,7 @@ function isKeyCode(keyCode, char) {
 function isWhatsappPageReady() {
     const inputSearch = document.querySelector(docInputSearch);
     if (inputSearch)
-		return true;
+	return true;
     return false;
 }
 
@@ -188,7 +234,7 @@ function bindShortcuts() {
 
 function handleKeyUp(e) {
     if (!e.altKey)
-		return
+	return
 
     switch (e.key || e.keyCode) {
     case 'ArrowUp':
@@ -204,42 +250,42 @@ function handleKeyUp(e) {
     case 'ArrowLeft':
     case 'j':
     case 'KeyJ':
-		var activePanel = getActiveEmojiPanel();
-		if (activePanel ==  null) {
-			e.preventDefault();
-			searchChats();
-		} else
-			navigateTabs(activePanel, -1);
-		break;
+	var activePanel = getActiveEmojiPanel();
+	if (activePanel ==  null) {
+	    e.preventDefault();
+	    searchChats();
+	} else
+	    navigateTabs(activePanel, -1);
+	break;
     case 'ArrowRight':
     case 'l':
     case 'KeyL':
-		var activePanel = getActiveEmojiPanel();
-		if (activePanel == null) {
-			e.preventDefault();
+	var activePanel = getActiveEmojiPanel();
+	if (activePanel == null) {
+	    e.preventDefault();
             writeInChat();
-		} else
-			navigateTabs(activePanel, 1);
-		break;
+	} else
+	    navigateTabs(activePanel, 1);
+	break;
     case ',':
     case 'Comma':
-		e.preventDefault();
+	e.preventDefault();
         showSmileys();
-		break;
-	case '.':
+	break;
+    case '.':
     case 'Period':
-		e.preventDefault();
+	e.preventDefault();
         showGifs();
-		break;
+	break;
     case ' ':
     case 'Space':
-		e.preventDefault();
+	e.preventDefault();
         searchChats();
-		break;
+	break;
     case 'o':
     case 'KeyO':
-		e.preventDefault();
-		searchCurrentChat();
-		break;
+	e.preventDefault();
+	searchCurrentChat();
+	break;
     }
 }
